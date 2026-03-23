@@ -1066,7 +1066,7 @@ export default function App() {
             <span className="font-bold tracking-tighter font-display">MastUi.com</span>
           </div>
           <p className="text-white/30 text-sm">
-            © 2026 MastUi.com AI. All rights reserved. Built with Gemini 3.1.
+            © 2026 MastUi.com AI. All rights reserved. Built with Advanced AI.
           </p>
           <div className="flex gap-6 text-white/30 text-sm">
             <a href="https://twitter.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">Twitter</a>
