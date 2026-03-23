@@ -34,17 +34,27 @@ export default function App() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [designInsight, setDesignInsight] = useState<string | null>(null);
+  const [sliderPosition, setSliderPosition] = useState(50);
+  const [isComparing, setIsComparing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [tiltPos, setTiltPos] = useState({ x: 0, y: 0 });
   const [hoveredStyle, setHoveredStyle] = useState<DesignStyle | null>(null);
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (selectedStyle !== 'story') return;
+  const handleGlobalMouseMove = (e: React.MouseEvent) => {
     const { clientX, clientY } = e;
     const { innerWidth, innerHeight } = window;
+    
+    // For parallax/story mode
     const x = (clientX / innerWidth - 0.5) * 20;
     const y = (clientY / innerHeight - 0.5) * 20;
     setMousePos({ x, y });
+
+    // For 3D Tilt
+    const tiltX = (clientY / innerHeight - 0.5) * 10;
+    const tiltY = (clientX / innerWidth - 0.5) * -10;
+    setTiltPos({ x: tiltX, y: tiltY });
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,8 +74,9 @@ export default function App() {
     if (!originalImage) return;
 
     try {
-      setIsAnalyzing(true);
+      setIsGenerating(true);
       setError(null);
+      setDesignInsight(null);
       
       // Step 1: Analyze
       const analysis = await analyzeScreenshot(originalImage);
@@ -75,6 +86,18 @@ export default function App() {
       
       // Step 2: Generate
       const result = await generateMastDesign(analysis, selectedStyle);
+      
+      // Simulate/Generate a brief insight based on the style
+      const insights: Record<DesignStyle, string> = {
+        mast: "Elevated the visual hierarchy using glassmorphism and depth-first layering. The focus was on 'buttery' transitions and premium clarity.",
+        neumorphism: "Transformed flat elements into tactile, organic surfaces. Used soft shadows to create a sense of physical interaction and comfort.",
+        brutalism: "Stripped away the fluff for a raw, high-contrast aesthetic. Bold typography and hard shadows emphasize structural honesty.",
+        cyberpunk: "Injected high-energy digital atmosphere. Used neon accents and HUD-inspired elements to create a high-tech, immersive experience.",
+        story: "Adopted an editorial layout with elegant serif typography and generous whitespace to create a narrative-driven, cinematic flow.",
+        artist: "Broke the standard grid with fluid shapes and expressive color bleeds, turning the UI into a unique piece of digital art."
+      };
+      
+      setDesignInsight(insights[selectedStyle]);
       setRedesignedImage(result);
       
     } catch (err) {
@@ -402,6 +425,128 @@ export default function App() {
     }
   };
 
+  const renderHolographicOverlay = () => (
+    <motion.div 
+      animate={{ 
+        backgroundPosition: ["200% 0%", "-200% 0%"],
+        opacity: [0, 0.3, 0]
+      }}
+      transition={{ 
+        duration: 8, 
+        repeat: Infinity, 
+        ease: "linear",
+        times: [0, 0.5, 1]
+      }}
+      className="absolute inset-0 pointer-events-none z-10 bg-gradient-to-r from-transparent via-white/30 to-transparent bg-[length:200%_100%] mix-blend-overlay"
+    />
+  );
+
+  const renderFloatingActionBar = () => (
+    <motion.div 
+      initial={{ y: 100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 p-2 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl"
+    >
+      <button 
+        onClick={handleDownload}
+        className="flex items-center gap-2 px-6 py-3 rounded-xl bg-mast-orange text-white font-bold text-xs uppercase tracking-widest hover:brightness-110 transition-all"
+      >
+        <Download size={16} />
+        Download
+      </button>
+      <div className="w-px h-8 bg-white/10 mx-1" />
+      <button 
+        onClick={reset}
+        className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 text-white/60 font-bold text-xs uppercase tracking-widest hover:bg-white/10 transition-all"
+      >
+        <RefreshCw size={16} />
+        New Project
+      </button>
+    </motion.div>
+  );
+
+  const renderAmbientBackground = () => {
+    const styles: Record<DesignStyle, string> = {
+      mast: "from-mast-orange/10 via-blue-500/5 to-purple-500/10",
+      neumorphism: "from-gray-400/5 via-gray-500/5 to-gray-600/5",
+      brutalism: "from-yellow-400/5 via-transparent to-black/10",
+      cyberpunk: "from-cyan-500/10 via-magenta-500/5 to-black",
+      story: "from-sepia-500/5 via-transparent to-black",
+      artist: "from-pink-500/10 via-purple-500/10 to-blue-500/10"
+    };
+
+    return (
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.1, 1],
+            opacity: [0.3, 0.5, 0.3]
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+          className={`absolute inset-0 bg-gradient-to-br ${styles[selectedStyle]} transition-colors duration-1000`} 
+        />
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay" />
+      </div>
+    );
+  };
+
+  const renderComparisonSlider = () => {
+    if (!originalImage || !redesignedImage) return null;
+
+    return (
+      <div className="relative aspect-video rounded-[32px] overflow-hidden border border-white/10 group cursor-ew-resize select-none"
+           onMouseMove={(e) => {
+             if (e.buttons === 1) {
+               const rect = e.currentTarget.getBoundingClientRect();
+               const x = ((e.clientX - rect.left) / rect.width) * 100;
+               setSliderPosition(Math.max(0, Math.min(100, x)));
+             }
+           }}
+           onMouseDown={(e) => {
+             const rect = e.currentTarget.getBoundingClientRect();
+             const x = ((e.clientX - rect.left) / rect.width) * 100;
+             setSliderPosition(Math.max(0, Math.min(100, x)));
+           }}
+      >
+        {/* Mast Version (Background) */}
+        <div className="absolute inset-0">
+          <img src={redesignedImage} alt="Mast" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+          {renderModeOverlay()}
+        </div>
+
+        {/* Original Version (Foreground Clip) */}
+        <div 
+          className="absolute inset-0 border-r-2 border-white/50 z-20"
+          style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
+        >
+          <img src={originalImage} alt="Original" className="w-full h-full object-cover grayscale opacity-80" referrerPolicy="no-referrer" />
+          <div className="absolute inset-0 bg-black/20" />
+        </div>
+
+        {/* Slider Handle */}
+        <div 
+          className="absolute top-0 bottom-0 w-1 bg-white z-30 flex items-center justify-center"
+          style={{ left: `${sliderPosition}%` }}
+        >
+          <div className="w-8 h-8 rounded-full bg-white shadow-xl flex items-center justify-center -ml-0.5">
+            <div className="flex gap-0.5">
+              <div className="w-0.5 h-3 bg-black/20 rounded-full" />
+              <div className="w-0.5 h-3 bg-black/20 rounded-full" />
+            </div>
+          </div>
+        </div>
+
+        {/* Labels */}
+        <div className="absolute top-6 left-6 z-40 px-3 py-1 bg-black/40 backdrop-blur-md rounded-lg text-[10px] font-bold uppercase tracking-widest border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+          Original
+        </div>
+        <div className="absolute top-6 right-6 z-40 px-3 py-1 bg-mast-orange/80 backdrop-blur-md rounded-lg text-[10px] font-bold uppercase tracking-widest border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+          Mast
+        </div>
+      </div>
+    );
+  };
+
   const renderHome = () => (
     <div className="grid lg:grid-cols-2 gap-16 items-center">
       {/* Left Column: Content */}
@@ -414,8 +559,18 @@ export default function App() {
           <Zap size={14} />
           <span>AI-POWERED UI TRANSFORMATION</span>
         </div>
-        <h1 className="text-6xl md:text-7xl font-bold font-display leading-[0.9] tracking-tight mb-8">
-          Turn Basic UI into <span className="text-mast-orange">Mast</span> Masterpieces.
+        <h1 className="text-6xl md:text-7xl font-bold font-display leading-[0.9] tracking-tight mb-8 overflow-hidden">
+          {["Turn", "Basic", "UI", "into", "Mast", "Masterpieces."].map((word, i) => (
+            <motion.span
+              key={i}
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: i * 0.1, duration: 0.8, ease: [0.215, 0.61, 0.355, 1] }}
+              className={`inline-block mr-3 ${word === "Mast" ? "text-mast-orange" : ""}`}
+            >
+              {word}
+            </motion.span>
+          ))}
         </h1>
         <p className="text-xl text-white/60 leading-relaxed mb-10 max-w-xl">
           Upload your UI screenshots and let our world-class AI designer redesign them with premium glassmorphism, fluid gradients, and artist-level aesthetics.
@@ -566,15 +721,15 @@ export default function App() {
       </motion.div>
 
       {/* Right Column: Preview */}
-      <div className="relative">
+      <div className="relative" style={{ perspective: "1000px" }}>
         <AnimatePresence mode="wait">
           {!originalImage ? (
             <motion.div 
               key="empty"
               initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
+              animate={{ opacity: 1, scale: 1, rotateX: tiltPos.x, rotateY: tiltPos.y }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="aspect-square rounded-[40px] glass-card flex items-center justify-center p-12 border border-white/10 relative overflow-hidden"
+              className="aspect-square rounded-[40px] glass-card flex items-center justify-center p-12 border border-white/10 relative overflow-hidden transition-transform duration-200 ease-out"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-mast-orange/5 to-transparent pointer-events-none" />
               <div className="text-center relative z-10">
@@ -588,88 +743,124 @@ export default function App() {
             <motion.div 
               key="preview"
               initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="grid gap-6"
+              animate={{ opacity: 1, scale: 1, rotateX: tiltPos.x * 0.5, rotateY: tiltPos.y * 0.5 }}
+              className="grid gap-6 transition-transform duration-200 ease-out"
             >
-              <div className="relative group">
-                <div className="absolute -top-3 -left-3 px-3 py-1 bg-white/10 backdrop-blur-md rounded-lg text-[10px] font-bold uppercase tracking-widest z-20 border border-white/10">
-                  Original
-                </div>
-                <div className={`aspect-video rounded-3xl overflow-hidden border ${error ? 'border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.2)]' : 'border-white/10'} bg-white/5 relative transition-all duration-500`}>
-                  <img 
-                    src={originalImage} 
-                    alt="Original UI" 
-                    className={`w-full h-full object-cover transition-all duration-700 ${isAnalyzing ? 'opacity-40 grayscale blur-[2px]' : error ? 'opacity-40 grayscale blur-[1px]' : 'opacity-60 grayscale-[0.5]'}`}
-                    referrerPolicy="no-referrer"
-                  />
-                  {isAnalyzing && (
-                    <motion.div 
-                      initial={{ top: "0%" }}
-                      animate={{ top: "100%" }}
-                      transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-                      className="absolute left-0 right-0 h-0.5 bg-mast-orange shadow-[0_0_15px_rgba(255,99,33,0.8)] z-10"
-                    />
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-center">
-                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                  <ArrowRight className="text-white/40" />
-                </div>
-              </div>
-
-              <div className="relative group">
-                <div className="absolute -top-3 -left-3 px-3 py-1 mast-gradient rounded-lg text-[10px] font-bold uppercase tracking-widest z-20 shadow-lg shadow-mast-orange/20">
-                  Mast Version
-                </div>
-                <div className={`aspect-video rounded-3xl overflow-hidden border ${selectedStyle === 'story' ? 'border-white/20 shadow-2xl shadow-white/5' : 'border-mast-orange/30'} bg-white/5 relative`}>
-                  {redesignedImage ? (
-                    <motion.div
-                      initial={selectedStyle === 'story' ? { opacity: 0, scale: 1.1 } : {}}
-                      animate={selectedStyle === 'story' ? {
-                        opacity: 1,
-                        scale: 1.05,
-                        x: mousePos.x,
-                        y: mousePos.y
-                      } : {}}
-                      transition={{ 
-                        opacity: { duration: 1.5 },
-                        scale: { duration: 2 },
-                        type: "spring", 
-                        damping: 20, 
-                        stiffness: 100 
-                      }}
-                      className="w-full h-full relative"
+              {redesignedImage && (
+                <div className="flex justify-between items-center px-2">
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setIsComparing(false)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${!isComparing ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'}`}
                     >
+                      Side by Side
+                    </button>
+                    <button 
+                      onClick={() => setIsComparing(true)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${isComparing ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white'}`}
+                    >
+                      Comparison Slider
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isComparing && redesignedImage ? (
+                renderComparisonSlider()
+              ) : (
+                <div className="grid gap-6">
+                  <div className="relative group">
+                    <div className="absolute -top-3 -left-3 px-3 py-1 bg-white/10 backdrop-blur-md rounded-lg text-[10px] font-bold uppercase tracking-widest z-20 border border-white/10">
+                      Original
+                    </div>
+                    <div className={`aspect-video rounded-3xl overflow-hidden border ${error ? 'border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.2)]' : 'border-white/10'} bg-white/5 relative transition-all duration-500`}>
                       <img 
-                        src={redesignedImage} 
-                        alt="Redesigned UI" 
-                        className="w-full h-full object-cover"
+                        src={originalImage} 
+                        alt="Original UI" 
+                        className={`w-full h-full object-cover transition-all duration-700 ${isAnalyzing ? 'opacity-40 grayscale blur-[2px]' : error ? 'opacity-40 grayscale blur-[1px]' : 'opacity-60 grayscale-[0.5]'}`}
                         referrerPolicy="no-referrer"
                       />
-                      {renderModeOverlay()}
-                      <div className="absolute bottom-6 right-6 flex gap-3 z-40">
-                        <motion.button 
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={handleDownload}
-                          className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-mast-orange text-white font-bold text-xs uppercase tracking-widest shadow-xl shadow-mast-orange/40 hover:brightness-110 transition-all"
-                        >
-                          <Download size={16} />
-                          Download Masterpiece
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  ) : (isAnalyzing || isGenerating) ? (
-                    renderLoadingState()
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center">
-                      <p className="text-sm text-white/40">Click "Make it Mast" to generate</p>
+                      {isAnalyzing && (
+                        <motion.div 
+                          initial={{ top: "0%" }}
+                          animate={{ top: "100%" }}
+                          transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+                          className="absolute left-0 right-0 h-0.5 bg-mast-orange shadow-[0_0_15px_rgba(255,99,33,0.8)] z-10"
+                        />
+                      )}
                     </div>
-                  )}
+                  </div>
+
+                  <div className="flex justify-center">
+                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                      <ArrowRight className="text-white/40" />
+                    </div>
+                  </div>
+
+                  <div className="relative group">
+                    <div className="absolute -top-3 -left-3 px-3 py-1 mast-gradient rounded-lg text-[10px] font-bold uppercase tracking-widest z-20 shadow-lg shadow-mast-orange/20">
+                      Mast Version
+                    </div>
+                    <div className={`aspect-video rounded-3xl overflow-hidden border ${selectedStyle === 'story' ? 'border-white/20 shadow-2xl shadow-white/5' : 'border-mast-orange/30'} bg-white/5 relative`}>
+                      {redesignedImage ? (
+                        <motion.div
+                          initial={selectedStyle === 'story' ? { opacity: 0, scale: 1.1 } : {}}
+                          animate={selectedStyle === 'story' ? {
+                            opacity: 1,
+                            scale: 1.05,
+                            x: mousePos.x,
+                            y: mousePos.y
+                          } : {}}
+                          transition={{ 
+                            opacity: { duration: 1.5 },
+                            scale: { duration: 2 },
+                            type: "spring", 
+                            damping: 20, 
+                            stiffness: 100 
+                          }}
+                          className="w-full h-full relative"
+                        >
+                          <img 
+                            src={redesignedImage} 
+                            alt="Redesigned UI" 
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                          {renderHolographicOverlay()}
+                          {renderModeOverlay()}
+                        </motion.div>
+                      ) : (isAnalyzing || isGenerating) ? (
+                        renderLoadingState()
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center">
+                          <p className="text-sm text-white/40">Click "Make it Mast" to generate</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Designer's Insight Panel */}
+              <AnimatePresence>
+                {designInsight && redesignedImage && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-6 rounded-[32px] glass-card border border-white/10 bg-gradient-to-br from-white/5 to-transparent"
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 rounded-xl bg-mast-orange/20 text-mast-orange">
+                        <Zap size={18} />
+                      </div>
+                      <h4 className="font-bold text-xs uppercase tracking-widest">AI Designer's Insight</h4>
+                    </div>
+                    <p className="text-white/60 text-sm leading-relaxed italic">
+                      "{designInsight}"
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>
@@ -813,15 +1004,12 @@ export default function App() {
 
   return (
     <div 
-      className="min-h-screen bg-[#050505] text-white selection:bg-mast-orange selection:text-white"
-      onMouseMove={handleMouseMove}
+      className="min-h-screen bg-[#050505] text-white selection:bg-mast-orange selection:text-white relative"
+      onMouseMove={handleGlobalMouseMove}
     >
-      {/* Background Atmosphere */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-mast-orange/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full" />
-      </div>
-
+      {renderAmbientBackground()}
+      {redesignedImage && renderFloatingActionBar()}
+      
       {/* Header */}
       <header className="relative z-50 px-6 py-8 flex justify-between items-center max-w-7xl mx-auto">
         <div className="flex items-center gap-2 cursor-pointer group" onClick={(e) => handleNavClick(e, 'home')}>
@@ -878,7 +1066,7 @@ export default function App() {
             <span className="font-bold tracking-tighter font-display">MastUi.com</span>
           </div>
           <p className="text-white/30 text-sm">
-            © 2026 MastUi.com AI. All rights reserved. Built with Advanced AI.
+            © 2026 MastUi.com AI. All rights reserved. Built with Gemini 3.1.
           </p>
           <div className="flex gap-6 text-white/30 text-sm">
             <a href="https://twitter.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">Twitter</a>
