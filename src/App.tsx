@@ -35,6 +35,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [hoveredStyle, setHoveredStyle] = useState<DesignStyle | null>(null);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (selectedStyle !== 'story') return;
@@ -94,7 +95,7 @@ export default function App() {
     if (!redesignedImage) return;
     const link = document.createElement('a');
     link.href = redesignedImage;
-    link.download = `mast-ui-redesign-${selectedStyle}.png`;
+    link.download = `mast-ui-redesign-${selectedStyle}-${new Date().getTime()}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -105,6 +106,195 @@ export default function App() {
     setCurrentPage(page);
     window.scrollTo(0, 0);
   };
+
+  const renderSampleUI = (style: DesignStyle) => {
+    const baseStyles = "w-full p-6 transition-all duration-500 rounded-2xl border";
+    
+    switch (style) {
+      case 'mast':
+        return (
+          <div className={`${baseStyles} bg-white/5 border-white/10 backdrop-blur-md shadow-xl`}>
+            <div className="w-12 h-12 rounded-full bg-mast-orange/20 mb-4" />
+            <div className="h-4 w-3/4 bg-white/20 rounded mb-2" />
+            <div className="h-4 w-1/2 bg-white/10 rounded" />
+          </div>
+        );
+      case 'neumorphism':
+        return (
+          <div className={`${baseStyles} bg-[#1a1a1a] border-transparent shadow-[10px_10px_20px_#0d0d0d,-10px_-10px_20px_#272727]`}>
+            <div className="w-12 h-12 rounded-full bg-[#1a1a1a] shadow-[inset_5px_5px_10px_#0d0d0d,inset_-5px_-5px_10px_#272727] mb-4" />
+            <div className="h-4 w-3/4 bg-[#1a1a1a] shadow-[inset_2px_2px_5px_#0d0d0d,inset_-2px_-2px_5px_#272727] rounded mb-2" />
+            <div className="h-4 w-1/2 bg-[#1a1a1a] shadow-[inset_2px_2px_5px_#0d0d0d,inset_-2px_-2px_5px_#272727] rounded" />
+          </div>
+        );
+      case 'brutalism':
+        return (
+          <div className={`${baseStyles} bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]`}>
+            <div className="w-12 h-12 bg-yellow-400 border-4 border-black mb-4" />
+            <div className="h-4 w-3/4 bg-black rounded-none mb-2" />
+            <div className="h-4 w-1/2 bg-black/20 rounded-none" />
+          </div>
+        );
+      case 'cyberpunk':
+        return (
+          <div className={`${baseStyles} bg-black border-2 border-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.5)]`}>
+            <div className="w-12 h-12 bg-magenta-500 border-2 border-magenta-400 mb-4 clip-path-poly" style={{ clipPath: 'polygon(20% 0%, 100% 0%, 100% 80%, 80% 100%, 0% 100%, 0% 20%)' }} />
+            <div className="h-4 w-3/4 bg-cyan-400/20 border-l-4 border-cyan-400 mb-2" />
+            <div className="h-4 w-1/2 bg-magenta-400/20 border-l-4 border-magenta-400" />
+          </div>
+        );
+      case 'story':
+        return (
+          <div className={`${baseStyles} bg-[#fdfcf8] border-transparent text-black font-serif`}>
+            <div className="w-16 h-1 bg-black mb-6" />
+            <h4 className="text-2xl italic mb-4">The Narrative</h4>
+            <div className="h-px w-full bg-black/10 mb-4" />
+            <p className="text-xs leading-relaxed opacity-60">A cinematic approach to interface design.</p>
+          </div>
+        );
+      case 'artist':
+        return (
+          <div className={`${baseStyles} bg-gradient-to-br from-pink-500/20 to-purple-500/20 border-white/5 overflow-hidden relative`}>
+            <div className="absolute -top-4 -right-4 w-24 h-24 bg-yellow-400/20 rounded-full blur-2xl" />
+            <div className="w-12 h-12 bg-white/10 rotate-45 mb-6 border border-white/20" />
+            <div className="space-y-2 relative z-10">
+              <div className="h-1 w-full bg-white/40 rounded-full" />
+              <div className="h-1 w-2/3 bg-white/20 rounded-full" />
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const renderLoadingState = () => {
+    if (isAnalyzing) {
+      return (
+        <div className="w-full h-full p-8 flex flex-col items-center justify-center relative overflow-hidden">
+          <div className="absolute inset-0 bg-white/[0.02] animate-pulse" />
+          <div className="w-full max-w-md space-y-6 relative z-10">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 rounded-2xl bg-mast-orange/20 flex items-center justify-center animate-bounce">
+                <RefreshCw className="text-mast-orange animate-spin" size={24} />
+              </div>
+              <div>
+                <h4 className="text-lg font-bold">Analyzing Interface</h4>
+                <p className="text-xs text-white/40 uppercase tracking-widest">Identifying UI patterns & components</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="h-4 w-full bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ x: "-100%" }}
+                  animate={{ x: "100%" }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  className="h-full w-1/3 bg-gradient-to-r from-transparent via-mast-orange/40 to-transparent"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="h-20 bg-white/5 rounded-2xl animate-pulse" />
+                <div className="h-20 bg-white/5 rounded-2xl animate-pulse" style={{ animationDelay: '0.2s' }} />
+                <div className="h-20 bg-white/5 rounded-2xl animate-pulse" style={{ animationDelay: '0.4s' }} />
+              </div>
+              <div className="h-32 bg-white/5 rounded-2xl animate-pulse" style={{ animationDelay: '0.6s' }} />
+            </div>
+          </div>
+          
+          {/* Scanning Line */}
+          <motion.div 
+            initial={{ top: "0%" }}
+            animate={{ top: "100%" }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-mast-orange to-transparent shadow-[0_0_20px_rgba(255,99,33,0.5)] z-20"
+          />
+        </div>
+      );
+    }
+
+    if (isGenerating) {
+      return (
+        <div className="w-full h-full p-8 flex flex-col items-center justify-center relative overflow-hidden">
+          <div className="absolute inset-0 bg-mast-orange/[0.01]" />
+          <div className="text-center space-y-8 relative z-10">
+            <div className="relative inline-block">
+              <div className="w-20 h-20 rounded-3xl bg-mast-orange/10 border border-mast-orange/20 flex items-center justify-center">
+                <Sparkles className="text-mast-orange animate-pulse" size={32} />
+              </div>
+              <motion.div 
+                animate={{ rotate: 360 }}
+                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                className="absolute -inset-4 border border-dashed border-mast-orange/20 rounded-full"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-2xl font-bold font-display">Crafting Masterpiece</h4>
+              <p className="text-sm text-white/40">Applying {selectedStyle} style architecture...</p>
+            </div>
+
+            <div className="w-64 h-1.5 bg-white/5 rounded-full mx-auto overflow-hidden">
+              <motion.div 
+                initial={{ width: "0%" }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 5, repeat: Infinity }}
+                className="h-full mast-gradient"
+              />
+            </div>
+
+            <div className="flex justify-center gap-2">
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  animate={{ 
+                    scale: [1, 1.2, 1],
+                    opacity: [0.3, 1, 0.3]
+                  }}
+                  transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                  className="w-2 h-2 rounded-full bg-mast-orange"
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const renderStoryOverlay = () => (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {/* Cinematic Vignette */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
+      
+      {/* Narrative Text */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8, duration: 1.5 }}
+        className="absolute bottom-12 left-8 right-8"
+      >
+        <div className="w-12 h-0.5 bg-mast-orange mb-4" />
+        <h4 className="text-2xl font-serif italic text-white/90 mb-2 tracking-wide">Chapter One: The Interface</h4>
+        <p className="text-sm text-white/50 font-serif leading-relaxed max-w-md">
+          A new digital landscape emerges, where every pixel tells a story of elegance and purpose.
+        </p>
+      </motion.div>
+
+      {/* Scene Transition Effect */}
+      <motion.div 
+        initial={{ scaleX: 1 }}
+        animate={{ scaleX: 0 }}
+        transition={{ duration: 1.2, ease: "easeInOut" }}
+        className="absolute inset-0 bg-black z-30 origin-right"
+      />
+      
+      {/* Film Grain Effect */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
+    </div>
+  );
 
   const renderHome = () => (
     <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -142,21 +332,45 @@ export default function App() {
 
         {/* Style Selector */}
         <div className="mb-10">
-          <label className="block text-xs font-bold uppercase tracking-widest text-white/40 mb-4">Select Design Style</label>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {(["mast", "neumorphism", "brutalism", "cyberpunk", "story", "artist"] as DesignStyle[]).map((style) => (
-              <button
-                key={style}
-                onClick={() => setSelectedStyle(style)}
-                className={`px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${
-                  selectedStyle === style 
-                    ? "mast-gradient border-transparent shadow-lg shadow-mast-orange/20" 
-                    : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
-                }`}
-              >
-                {style}
-              </button>
-            ))}
+          <div className="flex justify-between items-end mb-4">
+            <label className="text-xs font-bold uppercase tracking-widest text-white/40">Select Design Style</label>
+            <span className="text-[10px] font-bold text-mast-orange uppercase tracking-tighter animate-pulse">Live Preview</span>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {(["mast", "neumorphism", "brutalism", "cyberpunk", "story", "artist"] as DesignStyle[]).map((style) => (
+                <button
+                  key={style}
+                  onClick={() => setSelectedStyle(style)}
+                  onMouseEnter={() => setHoveredStyle(style)}
+                  onMouseLeave={() => setHoveredStyle(null)}
+                  className={`px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${
+                    selectedStyle === style 
+                      ? "mast-gradient border-transparent shadow-lg shadow-mast-orange/20" 
+                      : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
+                  }`}
+                >
+                  {style}
+                </button>
+              ))}
+            </div>
+
+            <div className="hidden lg:block">
+              <div className="relative h-full flex items-center justify-center">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={hoveredStyle || selectedStyle}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="w-full max-w-[280px]"
+                  >
+                    {renderSampleUI(hoveredStyle || selectedStyle)}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -252,13 +466,21 @@ export default function App() {
                 <div className="absolute -top-3 -left-3 px-3 py-1 bg-white/10 backdrop-blur-md rounded-lg text-[10px] font-bold uppercase tracking-widest z-20 border border-white/10">
                   Original
                 </div>
-                <div className="aspect-video rounded-3xl overflow-hidden border border-white/10 bg-white/5">
+                <div className="aspect-video rounded-3xl overflow-hidden border border-white/10 bg-white/5 relative">
                   <img 
                     src={originalImage} 
                     alt="Original UI" 
-                    className="w-full h-full object-cover opacity-60 grayscale-[0.5]"
+                    className={`w-full h-full object-cover transition-all duration-700 ${isAnalyzing ? 'opacity-40 grayscale blur-[2px]' : 'opacity-60 grayscale-[0.5]'}`}
                     referrerPolicy="no-referrer"
                   />
+                  {isAnalyzing && (
+                    <motion.div 
+                      initial={{ top: "0%" }}
+                      animate={{ top: "100%" }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+                      className="absolute left-0 right-0 h-0.5 bg-mast-orange shadow-[0_0_15px_rgba(255,99,33,0.8)] z-10"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -275,12 +497,20 @@ export default function App() {
                 <div className={`aspect-video rounded-3xl overflow-hidden border ${selectedStyle === 'story' ? 'border-white/20 shadow-2xl shadow-white/5' : 'border-mast-orange/30'} bg-white/5 relative`}>
                   {redesignedImage ? (
                     <motion.div
+                      initial={selectedStyle === 'story' ? { opacity: 0, scale: 1.1 } : {}}
                       animate={selectedStyle === 'story' ? {
+                        opacity: 1,
+                        scale: 1.05,
                         x: mousePos.x,
-                        y: mousePos.y,
-                        scale: 1.05
+                        y: mousePos.y
                       } : {}}
-                      transition={{ type: "spring", damping: 20, stiffness: 100 }}
+                      transition={{ 
+                        opacity: { duration: 1.5 },
+                        scale: { duration: 2 },
+                        type: "spring", 
+                        damping: 20, 
+                        stiffness: 100 
+                      }}
                       className="w-full h-full relative"
                     >
                       <img 
@@ -289,31 +519,24 @@ export default function App() {
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
                       />
-                      {selectedStyle === 'story' && (
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
-                      )}
-                      <div className="absolute bottom-4 right-4 flex gap-2">
-                        <button 
+                      {selectedStyle === 'story' && renderStoryOverlay()}
+                      <div className="absolute bottom-6 right-6 flex gap-3 z-40">
+                        <motion.button 
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           onClick={handleDownload}
-                          className="p-3 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 hover:bg-black/80 transition-all"
-                          title="Download Redesign"
+                          className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-mast-orange text-white font-bold text-xs uppercase tracking-widest shadow-xl shadow-mast-orange/40 hover:brightness-110 transition-all"
                         >
-                          <Download size={18} />
-                        </button>
+                          <Download size={16} />
+                          Download Masterpiece
+                        </motion.button>
                       </div>
                     </motion.div>
+                  ) : (isAnalyzing || isGenerating) ? (
+                    renderLoadingState()
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center">
-                      {(isAnalyzing || isGenerating) ? (
-                        <div className="space-y-4">
-                          <div className="w-12 h-12 border-4 border-mast-orange/30 border-t-mast-orange rounded-full animate-spin mx-auto" />
-                          <p className="text-sm text-white/60 font-medium">
-                            {isAnalyzing ? "Analyzing elements..." : "Applying Mast magic..."}
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-white/40">Click "Make it Mast" to generate</p>
-                      )}
+                      <p className="text-sm text-white/40">Click "Make it Mast" to generate</p>
                     </div>
                   )}
                 </div>
