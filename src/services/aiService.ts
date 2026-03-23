@@ -1,6 +1,9 @@
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI as GenerativeAI, GenerateContentResponse } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const VISION_MODEL = "gemini-3-flash-preview";
+const DESIGN_MODEL = "gemini-3.1-flash-image-preview";
+
+const ai = new GenerativeAI({ apiKey: process.env.AI_API_KEY || "" });
 
 export interface UIElement {
   type: string;
@@ -9,7 +12,7 @@ export interface UIElement {
 }
 
 export const analyzeScreenshot = async (base64Image: string): Promise<string> => {
-  const model = "gemini-3-flash-preview";
+  const model = VISION_MODEL;
   
   const prompt = `Analyze the attached UI screenshot. List all elements (buttons, inputs, labels, navigation items) and describe their positions and hierarchy in detail. 
   Focus on layout integrity so we can recreate it. Output the analysis as a descriptive text.`;
@@ -55,7 +58,7 @@ const getStylePrompt = (style: DesignStyle) => {
 };
 
 export const generateMastDesign = async (analysis: string, style: DesignStyle = "mast"): Promise<string> => {
-  const model = "gemini-3.1-flash-image-preview";
+  const model = DESIGN_MODEL;
   
   const styleDescription = getStylePrompt(style);
 
