@@ -1,12 +1,3 @@
-<div align="center">
-<img width="1200" height="475" alt="MastUi Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-
-# 💎 MastUi
-### Turn Basic UI Screenshots into Premium Masterpieces
-
-</div>
-
----
 
 **MastUi** is your personal AI design architect. It solves the "ugly UI" problem by taking any raw screenshot and completely reimagining it with world-class aesthetics. 
 
