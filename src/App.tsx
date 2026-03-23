@@ -19,7 +19,8 @@ import {
   Lock,
   Mail,
   User,
-  ArrowLeft
+  ArrowLeft,
+  AlertCircle
 } from 'lucide-react';
 import { analyzeScreenshot, generateMastDesign, DesignStyle } from './services/aiService';
 
@@ -264,37 +265,142 @@ export default function App() {
     return null;
   };
 
-  const renderStoryOverlay = () => (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      {/* Cinematic Vignette */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
-      
-      {/* Narrative Text */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8, duration: 1.5 }}
-        className="absolute bottom-12 left-8 right-8"
-      >
-        <div className="w-12 h-0.5 bg-mast-orange mb-4" />
-        <h4 className="text-2xl font-serif italic text-white/90 mb-2 tracking-wide">Chapter One: The Interface</h4>
-        <p className="text-sm text-white/50 font-serif leading-relaxed max-w-md">
-          A new digital landscape emerges, where every pixel tells a story of elegance and purpose.
-        </p>
-      </motion.div>
-
-      {/* Scene Transition Effect */}
+  const renderModeOverlay = () => {
+    const commonTransition = (
       <motion.div 
         initial={{ scaleX: 1 }}
         animate={{ scaleX: 0 }}
-        transition={{ duration: 1.2, ease: "easeInOut" }}
+        transition={{ duration: 1, ease: "easeInOut" }}
         className="absolute inset-0 bg-black z-30 origin-right"
       />
-      
-      {/* Film Grain Effect */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
-    </div>
-  );
+    );
+
+    switch (selectedStyle) {
+      case 'mast':
+        return (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {commonTransition}
+            {/* Glass Shards */}
+            {[...Array(5)].map((_, i) => (
+              <motion.div
+                key={i}
+                animate={{ 
+                  y: [0, -20, 0],
+                  rotate: [0, 10, 0],
+                  opacity: [0.1, 0.2, 0.1]
+                }}
+                transition={{ duration: 5 + i, repeat: Infinity, ease: "linear" }}
+                className="absolute w-32 h-32 bg-white/10 backdrop-blur-xl border border-white/20 rounded-full"
+                style={{ 
+                  top: `${20 * i}%`, 
+                  left: `${15 * i}%`,
+                  filter: 'blur(40px)'
+                }}
+              />
+            ))}
+            <div className="absolute inset-0 bg-gradient-to-br from-mast-orange/10 via-transparent to-blue-500/10 opacity-30" />
+          </div>
+        );
+      case 'neumorphism':
+        return (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {commonTransition}
+            {/* Inner Shadow Simulation */}
+            <div className="absolute inset-0 shadow-[inset_0_0_100px_rgba(0,0,0,0.4)]" />
+            <div className="absolute inset-0 border-[20px] border-white/5 blur-md" />
+            <div className="absolute top-8 left-8 flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+              <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+              <span className="text-[10px] font-bold text-white/40 tracking-widest uppercase">Tactile Mode</span>
+            </div>
+          </div>
+        );
+      case 'brutalism':
+        return (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {commonTransition}
+            {/* Bold Borders & Grid */}
+            <div className="absolute inset-0 border-[2px] border-black/80" />
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#000_1px,transparent_1px),linear-gradient(to_bottom,#000_1px,transparent_1px)] bg-[size:40px_40px] opacity-[0.05]" />
+            <motion.div 
+              initial={{ rotate: -15, scale: 2, opacity: 0 }}
+              animate={{ rotate: -15, scale: 1, opacity: 0.8 }}
+              transition={{ delay: 0.5, type: "spring" }}
+              className="absolute top-12 right-12 px-6 py-2 border-4 border-black font-black text-black bg-yellow-400 text-2xl uppercase tracking-tighter"
+            >
+              RAW UI
+            </motion.div>
+          </div>
+        );
+      case 'cyberpunk':
+        return (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {commonTransition}
+            {/* Scanlines & Digital Noise */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[size:100%_2px,3px_100%] z-10" />
+            <div className="absolute inset-0 opacity-[0.05] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+            
+            {/* HUD Elements */}
+            <div className="absolute top-4 right-4 text-cyan-400 font-mono text-[10px] space-y-1">
+              <div className="flex justify-between gap-4"><span>SYS_LINK:</span> <span className="animate-pulse">ACTIVE</span></div>
+              <div className="flex justify-between gap-4"><span>ENCRYPT:</span> <span>AES-256</span></div>
+              <div className="w-full h-1 bg-cyan-900/40 mt-2 overflow-hidden">
+                <motion.div 
+                  animate={{ x: ["-100%", "100%"] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  className="w-1/2 h-full bg-cyan-400"
+                />
+              </div>
+            </div>
+            
+            <div className="absolute inset-0 border border-cyan-500/20 shadow-[inset_0_0_50px_rgba(6,182,212,0.1)]" />
+          </div>
+        );
+      case 'story':
+        return (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {commonTransition}
+            {/* Cinematic Vignette */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
+            
+            {/* Narrative Text */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8, duration: 1.5 }}
+              className="absolute bottom-12 left-8 right-8"
+            >
+              <div className="w-12 h-0.5 bg-mast-orange mb-4" />
+              <h4 className="text-2xl font-serif italic text-white/90 mb-2 tracking-wide">Chapter One: The Interface</h4>
+              <p className="text-sm text-white/50 font-serif leading-relaxed max-w-md">
+                A new digital landscape emerges, where every pixel tells a story of elegance and purpose.
+              </p>
+            </motion.div>
+            
+            {/* Film Grain Effect */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
+          </div>
+        );
+      case 'artist':
+        return (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {commonTransition}
+            {/* Abstract Paint Bleeds */}
+            <div className="absolute -top-20 -left-20 w-64 h-64 bg-pink-500/20 rounded-full blur-[100px] animate-pulse" />
+            <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-purple-500/20 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
+            
+            <div className="absolute top-8 right-8">
+              <div className="w-16 h-16 border border-white/10 rounded-full flex items-center justify-center rotate-12">
+                <Palette className="text-white/20" size={24} />
+              </div>
+            </div>
+            
+            <div className="absolute inset-0 opacity-[0.02] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-color-dodge" />
+          </div>
+        );
+      default:
+        return commonTransition;
+    }
+  };
 
   const renderHome = () => (
     <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -400,10 +506,12 @@ export default function App() {
           </motion.div>
         ) : (
           <div className="flex flex-col gap-4">
-            <button 
+            <motion.button 
+              animate={error ? { x: [0, -10, 10, -10, 10, 0] } : {}}
+              transition={{ duration: 0.5 }}
               onClick={triggerTransform}
               disabled={isAnalyzing || isGenerating}
-              className="w-full py-4 rounded-2xl mast-gradient font-bold text-lg flex items-center justify-center gap-3 shadow-xl shadow-mast-orange/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`w-full py-4 rounded-2xl ${error ? 'bg-red-500/20 border border-red-500/50 text-red-400' : 'mast-gradient text-white'} font-bold text-lg flex items-center justify-center gap-3 shadow-xl ${error ? 'shadow-red-500/10' : 'shadow-mast-orange/20'} active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               {isAnalyzing ? (
                 <>
@@ -421,7 +529,7 @@ export default function App() {
                   Make it Mast
                 </>
               )}
-            </button>
+            </motion.button>
             <button 
               onClick={reset}
               className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 font-medium hover:bg-white/10 transition-all"
@@ -431,9 +539,30 @@ export default function App() {
           </div>
         )}
 
-        {error && (
-          <p className="mt-4 text-red-400 text-sm font-medium">{error}</p>
-        )}
+        <AnimatePresence>
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.95 }}
+              className="mt-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-start gap-3"
+            >
+              <div className="p-2 rounded-xl bg-red-500/20 text-red-400 shrink-0">
+                <AlertCircle size={18} />
+              </div>
+              <div className="flex-1 pt-1">
+                <h5 className="text-red-400 font-bold text-xs uppercase tracking-widest mb-1">Transformation Error</h5>
+                <p className="text-red-400/80 text-sm leading-relaxed">{error}</p>
+              </div>
+              <button 
+                onClick={() => setError(null)}
+                className="p-1 text-red-400/40 hover:text-red-400 transition-colors"
+              >
+                <ArrowLeft size={16} className="rotate-90" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
 
       {/* Right Column: Preview */}
@@ -466,11 +595,11 @@ export default function App() {
                 <div className="absolute -top-3 -left-3 px-3 py-1 bg-white/10 backdrop-blur-md rounded-lg text-[10px] font-bold uppercase tracking-widest z-20 border border-white/10">
                   Original
                 </div>
-                <div className="aspect-video rounded-3xl overflow-hidden border border-white/10 bg-white/5 relative">
+                <div className={`aspect-video rounded-3xl overflow-hidden border ${error ? 'border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.2)]' : 'border-white/10'} bg-white/5 relative transition-all duration-500`}>
                   <img 
                     src={originalImage} 
                     alt="Original UI" 
-                    className={`w-full h-full object-cover transition-all duration-700 ${isAnalyzing ? 'opacity-40 grayscale blur-[2px]' : 'opacity-60 grayscale-[0.5]'}`}
+                    className={`w-full h-full object-cover transition-all duration-700 ${isAnalyzing ? 'opacity-40 grayscale blur-[2px]' : error ? 'opacity-40 grayscale blur-[1px]' : 'opacity-60 grayscale-[0.5]'}`}
                     referrerPolicy="no-referrer"
                   />
                   {isAnalyzing && (
@@ -519,7 +648,7 @@ export default function App() {
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
                       />
-                      {selectedStyle === 'story' && renderStoryOverlay()}
+                      {renderModeOverlay()}
                       <div className="absolute bottom-6 right-6 flex gap-3 z-40">
                         <motion.button 
                           whileHover={{ scale: 1.05 }}
