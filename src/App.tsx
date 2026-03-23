@@ -14,17 +14,36 @@ import {
   RefreshCw,
   Zap,
   Layers,
-  Palette
+  Palette,
+  CheckCircle2,
+  Lock,
+  Mail,
+  User,
+  ArrowLeft
 } from 'lucide-react';
-import { analyzeScreenshot, generateMastDesign } from './services/aiService';
+import { analyzeScreenshot, generateMastDesign, DesignStyle } from './services/aiService';
+
+type Page = 'home' | 'showcase' | 'process' | 'pricing' | 'signin' | 'signup';
 
 export default function App() {
+  const [currentPage, setCurrentPage] = useState<Page>('home');
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [redesignedImage, setRedesignedImage] = useState<string | null>(null);
+  const [selectedStyle, setSelectedStyle] = useState<DesignStyle>("mast");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (selectedStyle !== 'story') return;
+    const { clientX, clientY } = e;
+    const { innerWidth, innerHeight } = window;
+    const x = (clientX / innerWidth - 0.5) * 20;
+    const y = (clientY / innerHeight - 0.5) * 20;
+    setMousePos({ x, y });
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,7 +72,7 @@ export default function App() {
       setIsGenerating(true);
       
       // Step 2: Generate
-      const result = await generateMastDesign(analysis);
+      const result = await generateMastDesign(analysis, selectedStyle);
       setRedesignedImage(result);
       
     } catch (err) {
@@ -71,8 +90,380 @@ export default function App() {
     setError(null);
   };
 
+  const handleDownload = () => {
+    if (!redesignedImage) return;
+    const link = document.createElement('a');
+    link.href = redesignedImage;
+    link.download = `mast-ui-redesign-${selectedStyle}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleNavClick = (e: React.MouseEvent, page: Page) => {
+    e.preventDefault();
+    setCurrentPage(page);
+    window.scrollTo(0, 0);
+  };
+
+  const renderHome = () => (
+    <div className="grid lg:grid-cols-2 gap-16 items-center">
+      {/* Left Column: Content */}
+      <motion.div 
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.8 }}
+      >
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-mast-orange mb-6">
+          <Zap size={14} />
+          <span>AI-POWERED UI TRANSFORMATION</span>
+        </div>
+        <h1 className="text-6xl md:text-7xl font-bold font-display leading-[0.9] tracking-tight mb-8">
+          Turn Basic UI into <span className="text-mast-orange">Mast</span> Masterpieces.
+        </h1>
+        <p className="text-xl text-white/60 leading-relaxed mb-10 max-w-xl">
+          Upload your UI screenshots and let our world-class AI designer redesign them with premium glassmorphism, fluid gradients, and artist-level aesthetics.
+        </p>
+
+        <div className="flex flex-wrap gap-4 mb-12">
+          <div className="flex items-center gap-2 text-sm text-white/40">
+            <Layers size={16} />
+            <span>Maintains Layout</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-white/40">
+            <Palette size={16} />
+            <span>Premium Styles</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-white/40">
+            <Sparkles size={16} />
+            <span>Artist Level</span>
+          </div>
+        </div>
+
+        {/* Style Selector */}
+        <div className="mb-10">
+          <label className="block text-xs font-bold uppercase tracking-widest text-white/40 mb-4">Select Design Style</label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {(["mast", "neumorphism", "brutalism", "cyberpunk", "story", "artist"] as DesignStyle[]).map((style) => (
+              <button
+                key={style}
+                onClick={() => setSelectedStyle(style)}
+                className={`px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${
+                  selectedStyle === style 
+                    ? "mast-gradient border-transparent shadow-lg shadow-mast-orange/20" 
+                    : "bg-white/5 border-white/10 text-white/60 hover:bg-white/10"
+                }`}
+              >
+                {style}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {!originalImage ? (
+          <motion.div
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => fileInputRef.current?.click()}
+            className="cursor-pointer group relative overflow-hidden p-8 rounded-3xl border-2 border-dashed border-white/10 bg-white/[0.02] hover:bg-white/[0.04] hover:border-mast-orange/50 transition-all duration-300"
+          >
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-mast-orange/10 transition-colors">
+                <Upload className="w-8 h-8 text-white/40 group-hover:text-mast-orange transition-colors" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold mb-1">Upload Screenshot</h3>
+                <p className="text-sm text-white/40">Drag and drop or click to browse</p>
+              </div>
+            </div>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleImageUpload} 
+              accept="image/*" 
+              className="hidden" 
+            />
+          </motion.div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <button 
+              onClick={triggerTransform}
+              disabled={isAnalyzing || isGenerating}
+              className="w-full py-4 rounded-2xl mast-gradient font-bold text-lg flex items-center justify-center gap-3 shadow-xl shadow-mast-orange/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isAnalyzing ? (
+                <>
+                  <RefreshCw className="animate-spin" />
+                  Analyzing UI...
+                </>
+              ) : isGenerating ? (
+                <>
+                  <RefreshCw className="animate-spin" />
+                  Designing Masterpiece...
+                </>
+              ) : (
+                <>
+                  <Sparkles />
+                  Make it Mast
+                </>
+              )}
+            </button>
+            <button 
+              onClick={reset}
+              className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 font-medium hover:bg-white/10 transition-all"
+            >
+              Upload Different Image
+            </button>
+          </div>
+        )}
+
+        {error && (
+          <p className="mt-4 text-red-400 text-sm font-medium">{error}</p>
+        )}
+      </motion.div>
+
+      {/* Right Column: Preview */}
+      <div className="relative">
+        <AnimatePresence mode="wait">
+          {!originalImage ? (
+            <motion.div 
+              key="empty"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="aspect-square rounded-[40px] glass-card flex items-center justify-center p-12 border border-white/10 relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-mast-orange/5 to-transparent pointer-events-none" />
+              <div className="text-center relative z-10">
+                <div className="w-24 h-24 rounded-3xl bg-white/5 mx-auto mb-6 flex items-center justify-center animate-float">
+                  <ImageIcon className="w-12 h-12 text-white/20" />
+                </div>
+                <p className="text-white/40 font-medium">Your design preview will appear here</p>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="preview"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="grid gap-6"
+            >
+              <div className="relative group">
+                <div className="absolute -top-3 -left-3 px-3 py-1 bg-white/10 backdrop-blur-md rounded-lg text-[10px] font-bold uppercase tracking-widest z-20 border border-white/10">
+                  Original
+                </div>
+                <div className="aspect-video rounded-3xl overflow-hidden border border-white/10 bg-white/5">
+                  <img 
+                    src={originalImage} 
+                    alt="Original UI" 
+                    className="w-full h-full object-cover opacity-60 grayscale-[0.5]"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-center">
+                <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
+                  <ArrowRight className="text-white/40" />
+                </div>
+              </div>
+
+              <div className="relative group">
+                <div className="absolute -top-3 -left-3 px-3 py-1 mast-gradient rounded-lg text-[10px] font-bold uppercase tracking-widest z-20 shadow-lg shadow-mast-orange/20">
+                  Mast Version
+                </div>
+                <div className={`aspect-video rounded-3xl overflow-hidden border ${selectedStyle === 'story' ? 'border-white/20 shadow-2xl shadow-white/5' : 'border-mast-orange/30'} bg-white/5 relative`}>
+                  {redesignedImage ? (
+                    <motion.div
+                      animate={selectedStyle === 'story' ? {
+                        x: mousePos.x,
+                        y: mousePos.y,
+                        scale: 1.05
+                      } : {}}
+                      transition={{ type: "spring", damping: 20, stiffness: 100 }}
+                      className="w-full h-full relative"
+                    >
+                      <img 
+                        src={redesignedImage} 
+                        alt="Redesigned UI" 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      {selectedStyle === 'story' && (
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
+                      )}
+                      <div className="absolute bottom-4 right-4 flex gap-2">
+                        <button 
+                          onClick={handleDownload}
+                          className="p-3 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 hover:bg-black/80 transition-all"
+                          title="Download Redesign"
+                        >
+                          <Download size={18} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center">
+                      {(isAnalyzing || isGenerating) ? (
+                        <div className="space-y-4">
+                          <div className="w-12 h-12 border-4 border-mast-orange/30 border-t-mast-orange rounded-full animate-spin mx-auto" />
+                          <p className="text-sm text-white/60 font-medium">
+                            {isAnalyzing ? "Analyzing elements..." : "Applying Mast magic..."}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-white/40">Click "Make it Mast" to generate</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+
+  const renderShowcase = () => (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-6xl mx-auto py-12 px-6">
+      <div className="text-center mb-16">
+        <h2 className="text-5xl md:text-6xl font-bold font-display mb-6 tracking-tight">Design <span className="text-mast-orange">Showcase</span></h2>
+        <p className="text-white/60 max-w-2xl mx-auto text-lg leading-relaxed">Explore how MastUi transforms ordinary interfaces into extraordinary digital experiences across six distinct design philosophies.</p>
+      </div>
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {[
+          { mode: 'Mast', desc: 'Glassmorphism & Minimalist', seed: 'glass', color: 'from-mast-orange/20' },
+          { mode: 'Neumorphism', desc: 'Soft UI & Tactile depth', seed: 'soft', color: 'from-blue-500/20' },
+          { mode: 'Brutalism', desc: 'Bold, raw & high-contrast', seed: 'brutal', color: 'from-yellow-500/20' },
+          { mode: 'Cyberpunk', desc: 'Futuristic & neon-infused', seed: 'cyber', color: 'from-purple-500/20' },
+          { mode: 'Story', desc: 'Editorial & narrative-driven', seed: 'editorial', color: 'from-white/10' },
+          { mode: 'Artist', desc: 'Creative & unconventional', seed: 'abstract', color: 'from-pink-500/20' }
+        ].map((item, idx) => (
+          <motion.div 
+            key={idx} 
+            whileHover={{ y: -10 }}
+            className="glass-card rounded-[32px] overflow-hidden group border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] transition-all duration-500"
+          >
+            <div className="aspect-[4/3] relative overflow-hidden">
+              <img 
+                src={`https://picsum.photos/seed/${item.seed}/800/600`} 
+                alt={item.mode} 
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out" 
+                referrerPolicy="no-referrer" 
+              />
+              <div className={`absolute inset-0 bg-gradient-to-t ${item.color} via-black/40 to-transparent opacity-60 group-hover:opacity-80 transition-opacity`} />
+              <div className="absolute top-4 left-4 px-3 py-1 bg-black/40 backdrop-blur-md border border-white/10 rounded-lg text-[10px] font-bold uppercase tracking-widest">
+                {item.mode} Mode
+              </div>
+            </div>
+            <div className="p-8">
+              <h3 className="font-bold text-2xl mb-2 group-hover:text-mast-orange transition-colors">{item.mode} Style</h3>
+              <p className="text-white/40 text-sm leading-relaxed">{item.desc}</p>
+              <div className="mt-6 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-mast-orange opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
+                View Details <ArrowRight size={14} />
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </motion.div>
+  );
+
+  const renderProcess = () => (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto py-12">
+      <h2 className="text-5xl font-bold font-display mb-8 text-center">The <span className="text-mast-orange">Mast</span> Process</h2>
+      <div className="space-y-12 mt-16">
+        {[
+          { step: '01', title: 'Upload Screenshot', desc: 'Provide your existing UI screenshot. Our AI vision model analyzes every pixel, element, and layout constraint.' },
+          { step: '02', title: 'Select Your Vibe', desc: 'Choose from our curated styles like Neumorphism, Cyberpunk, or the signature Mast Glassmorphism.' },
+          { step: '03', title: 'AI Transformation', desc: 'Our world-class designer model applies premium aesthetics while maintaining the functional integrity of your layout.' },
+          { step: '04', title: 'Export & Implement', desc: 'Download your high-resolution masterpiece and use it as a blueprint for your next big project.' }
+        ].map((item, idx) => (
+          <div key={idx} className="flex gap-8 items-start">
+            <div className="text-4xl font-bold font-display text-mast-orange opacity-50">{item.step}</div>
+            <div className="glass-card p-8 rounded-3xl border border-white/10 flex-1">
+              <h3 className="text-2xl font-bold mb-3">{item.title}</h3>
+              <p className="text-white/60 leading-relaxed">{item.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+
+  const renderPricing = () => (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-5xl mx-auto py-12">
+      <h2 className="text-5xl font-bold font-display mb-16 text-center">Simple <span className="text-mast-orange">Pricing</span></h2>
+      <div className="grid md:grid-cols-3 gap-8">
+        {[
+          { name: 'Free', price: '$0', features: ['3 Transformations/mo', 'Standard Styles', 'Community Support'] },
+          { name: 'Pro', price: '$19', features: ['Unlimited Transformations', 'All Premium Styles', 'Priority AI Queue', 'Commercial License'], featured: true },
+          { name: 'Team', price: '$49', features: ['Everything in Pro', 'Custom Style Training', 'API Access', 'Team Collaboration'] }
+        ].map((plan, idx) => (
+          <div key={idx} className={`glass-card p-8 rounded-[32px] border ${plan.featured ? 'border-mast-orange shadow-2xl shadow-mast-orange/10 scale-105' : 'border-white/10'} flex flex-col`}>
+            <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
+            <div className="text-4xl font-bold mb-6">{plan.price}<span className="text-sm font-normal text-white/40">/mo</span></div>
+            <ul className="space-y-4 mb-8 flex-1">
+              {plan.features.map((f, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm text-white/70">
+                  <CheckCircle2 size={16} className="text-mast-orange" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <button className={`w-full py-3 rounded-xl font-bold transition-all ${plan.featured ? 'mast-gradient' : 'bg-white/5 border border-white/10 hover:bg-white/10'}`}>
+              Get Started
+            </button>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+
+  const renderAuth = (type: 'signin' | 'signup') => (
+    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md mx-auto py-12">
+      <div className="glass-card p-10 rounded-[40px] border border-white/10">
+        <h2 className="text-3xl font-bold font-display mb-2 text-center">{type === 'signin' ? 'Welcome Back' : 'Create Account'}</h2>
+        <p className="text-center text-white/40 mb-8 text-sm">{type === 'signin' ? 'Enter your details to access your dashboard' : 'Join the community of world-class designers'}</p>
+        
+        <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+          {type === 'signup' && (
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+              <input type="text" placeholder="Full Name" className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-mast-orange/50 transition-colors" />
+            </div>
+          )}
+          <div className="relative">
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+            <input type="email" placeholder="Email Address" className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-mast-orange/50 transition-colors" />
+          </div>
+          <div className="relative">
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={18} />
+            <input type="password" placeholder="Password" className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:border-mast-orange/50 transition-colors" />
+          </div>
+          <button className="w-full py-4 rounded-2xl mast-gradient font-bold text-lg shadow-lg shadow-mast-orange/20 active:scale-95 transition-all mt-4">
+            {type === 'signin' ? 'Sign In' : 'Sign Up'}
+          </button>
+        </form>
+
+        <div className="mt-8 pt-8 border-t border-white/5 text-center text-sm text-white/40">
+          {type === 'signin' ? (
+            <p>Don't have an account? <a href="#" onClick={(e) => handleNavClick(e, 'signup')} className="text-mast-orange hover:underline">Sign Up</a></p>
+          ) : (
+            <p>Already have an account? <a href="#" onClick={(e) => handleNavClick(e, 'signin')} className="text-mast-orange hover:underline">Sign In</a></p>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+
   return (
-    <div className="min-h-screen bg-[#050505] text-white selection:bg-mast-orange selection:text-white">
+    <div 
+      className="min-h-screen bg-[#050505] text-white selection:bg-mast-orange selection:text-white"
+      onMouseMove={handleMouseMove}
+    >
       {/* Background Atmosphere */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-mast-orange/10 blur-[120px] rounded-full" />
@@ -80,221 +471,67 @@ export default function App() {
       </div>
 
       {/* Header */}
-      <header className="relative z-10 px-6 py-8 flex justify-between items-center max-w-7xl mx-auto">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 mast-gradient rounded-xl flex items-center justify-center shadow-lg shadow-mast-orange/20">
-            <Sparkles className="text-white w-6 h-6" />
-          </div>
-          <span className="text-2xl font-bold tracking-tighter font-display">MastUi</span>
+      <header className="relative z-50 px-6 py-8 flex justify-between items-center max-w-7xl mx-auto">
+        <div className="flex items-center gap-2 cursor-pointer group" onClick={(e) => handleNavClick(e, 'home')}>
+          <span className="text-2xl font-bold tracking-tighter font-display bg-gradient-to-r from-white via-white to-mast-orange bg-clip-text text-transparent group-hover:to-white transition-all duration-500">
+            MastUi.com
+          </span>
         </div>
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60">
-          <a href="#" className="hover:text-white transition-colors">Showcase</a>
-          <a href="#" className="hover:text-white transition-colors">Process</a>
-          <a href="#" className="hover:text-white transition-colors">Pricing</a>
-          <button className="px-5 py-2 rounded-full border border-white/10 hover:bg-white/5 transition-colors">
-            Sign In
-          </button>
+        <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
+          <a href="#" onClick={(e) => handleNavClick(e, 'showcase')} className={`transition-colors ${currentPage === 'showcase' ? 'text-mast-orange' : 'text-white/60 hover:text-white'}`}>Showcase</a>
+          <a href="#" onClick={(e) => handleNavClick(e, 'process')} className={`transition-colors ${currentPage === 'process' ? 'text-mast-orange' : 'text-white/60 hover:text-white'}`}>Process</a>
+          <a href="#" onClick={(e) => handleNavClick(e, 'pricing')} className={`transition-colors ${currentPage === 'pricing' ? 'text-mast-orange' : 'text-white/60 hover:text-white'}`}>Pricing</a>
+          <div className="flex items-center gap-3 ml-4">
+            <button 
+              onClick={(e) => handleNavClick(e, 'signin')}
+              className={`px-5 py-2 rounded-full border transition-colors ${currentPage === 'signin' ? 'border-mast-orange text-mast-orange' : 'border-white/10 text-white/60 hover:bg-white/5'}`}
+            >
+              Sign In
+            </button>
+            <button 
+              onClick={(e) => handleNavClick(e, 'signup')}
+              className="px-5 py-2 rounded-full mast-gradient font-bold shadow-lg shadow-mast-orange/10 hover:shadow-mast-orange/20 transition-all"
+            >
+              Sign Up
+            </button>
+          </div>
         </nav>
       </header>
 
       <main className="relative z-10 max-w-7xl mx-auto px-6 pt-12 pb-24">
-        <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Left Column: Content */}
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
+        {currentPage !== 'home' && (
+          <button 
+            onClick={(e) => handleNavClick(e, 'home')}
+            className="mb-8 flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors group"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-mast-orange mb-6">
-              <Zap size={14} />
-              <span>AI-POWERED UI TRANSFORMATION</span>
-            </div>
-            <h1 className="text-6xl md:text-7xl font-bold font-display leading-[0.9] tracking-tight mb-8">
-              Turn Basic UI into <span className="text-mast-orange">Mast</span> Masterpieces.
-            </h1>
-            <p className="text-xl text-white/60 leading-relaxed mb-10 max-w-xl">
-              Upload your UI screenshots and let our world-class AI designer redesign them with premium glassmorphism, fluid gradients, and artist-level aesthetics.
-            </p>
+            <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+            Back to Editor
+          </button>
+        )}
 
-            <div className="flex flex-wrap gap-4 mb-12">
-              <div className="flex items-center gap-2 text-sm text-white/40">
-                <Layers size={16} />
-                <span>Maintains Layout</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-white/40">
-                <Palette size={16} />
-                <span>Premium Styles</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-white/40">
-                <Sparkles size={16} />
-                <span>Artist Level</span>
-              </div>
-            </div>
-
-            {!originalImage ? (
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => fileInputRef.current?.click()}
-                className="cursor-pointer group relative overflow-hidden p-8 rounded-3xl border-2 border-dashed border-white/10 bg-white/[0.02] hover:bg-white/[0.04] hover:border-mast-orange/50 transition-all duration-300"
-              >
-                <div className="flex flex-col items-center text-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-mast-orange/10 transition-colors">
-                    <Upload className="w-8 h-8 text-white/40 group-hover:text-mast-orange transition-colors" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold mb-1">Upload Screenshot</h3>
-                    <p className="text-sm text-white/40">Drag and drop or click to browse</p>
-                  </div>
-                </div>
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleImageUpload} 
-                  accept="image/*" 
-                  className="hidden" 
-                />
-              </motion.div>
-            ) : (
-              <div className="flex flex-col gap-4">
-                <button 
-                  onClick={triggerTransform}
-                  disabled={isAnalyzing || isGenerating}
-                  className="w-full py-4 rounded-2xl mast-gradient font-bold text-lg flex items-center justify-center gap-3 shadow-xl shadow-mast-orange/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isAnalyzing ? (
-                    <>
-                      <RefreshCw className="animate-spin" />
-                      Analyzing UI...
-                    </>
-                  ) : isGenerating ? (
-                    <>
-                      <RefreshCw className="animate-spin" />
-                      Designing Masterpiece...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles />
-                      Make it Mast
-                    </>
-                  )}
-                </button>
-                <button 
-                  onClick={reset}
-                  className="w-full py-4 rounded-2xl bg-white/5 border border-white/10 font-medium hover:bg-white/10 transition-all"
-                >
-                  Upload Different Image
-                </button>
-              </div>
-            )}
-
-            {error && (
-              <p className="mt-4 text-red-400 text-sm font-medium">{error}</p>
-            )}
-          </motion.div>
-
-          {/* Right Column: Preview */}
-          <div className="relative">
-            <AnimatePresence mode="wait">
-              {!originalImage ? (
-                <motion.div 
-                  key="empty"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="aspect-square rounded-[40px] glass-card flex items-center justify-center p-12 border border-white/10 relative overflow-hidden"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-mast-orange/5 to-transparent pointer-events-none" />
-                  <div className="text-center relative z-10">
-                    <div className="w-24 h-24 rounded-3xl bg-white/5 mx-auto mb-6 flex items-center justify-center animate-float">
-                      <ImageIcon className="w-12 h-12 text-white/20" />
-                    </div>
-                    <p className="text-white/40 font-medium">Your design preview will appear here</p>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div 
-                  key="preview"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="grid gap-6"
-                >
-                  <div className="relative group">
-                    <div className="absolute -top-3 -left-3 px-3 py-1 bg-white/10 backdrop-blur-md rounded-lg text-[10px] font-bold uppercase tracking-widest z-20 border border-white/10">
-                      Original
-                    </div>
-                    <div className="aspect-video rounded-3xl overflow-hidden border border-white/10 bg-white/5">
-                      <img 
-                        src={originalImage} 
-                        alt="Original UI" 
-                        className="w-full h-full object-cover opacity-60 grayscale-[0.5]"
-                        referrerPolicy="no-referrer"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-center">
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                      <ArrowRight className="text-white/40" />
-                    </div>
-                  </div>
-
-                  <div className="relative group">
-                    <div className="absolute -top-3 -left-3 px-3 py-1 mast-gradient rounded-lg text-[10px] font-bold uppercase tracking-widest z-20 shadow-lg shadow-mast-orange/20">
-                      Mast Version
-                    </div>
-                    <div className="aspect-video rounded-3xl overflow-hidden border border-mast-orange/30 bg-white/5 relative">
-                      {redesignedImage ? (
-                        <>
-                          <img 
-                            src={redesignedImage} 
-                            alt="Redesigned UI" 
-                            className="w-full h-full object-cover"
-                            referrerPolicy="no-referrer"
-                          />
-                          <div className="absolute bottom-4 right-4 flex gap-2">
-                            <button className="p-3 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 hover:bg-black/80 transition-all">
-                              <Download size={18} />
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center">
-                          {(isAnalyzing || isGenerating) ? (
-                            <div className="space-y-4">
-                              <div className="w-12 h-12 border-4 border-mast-orange/30 border-t-mast-orange rounded-full animate-spin mx-auto" />
-                              <p className="text-sm text-white/60 font-medium">
-                                {isAnalyzing ? "Analyzing elements..." : "Applying Mast magic..."}
-                              </p>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-white/40">Click "Make it Mast" to generate</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
+        <AnimatePresence mode="wait">
+          {currentPage === 'home' && <div key="home">{renderHome()}</div>}
+          {currentPage === 'showcase' && <div key="showcase">{renderShowcase()}</div>}
+          {currentPage === 'process' && <div key="process">{renderProcess()}</div>}
+          {currentPage === 'pricing' && <div key="pricing">{renderPricing()}</div>}
+          {currentPage === 'signin' && <div key="signin">{renderAuth('signin')}</div>}
+          {currentPage === 'signup' && <div key="signup">{renderAuth('signup')}</div>}
+        </AnimatePresence>
       </main>
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-white/5 py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex items-center gap-2 opacity-50">
-            <Sparkles className="w-5 h-5" />
-            <span className="font-bold tracking-tighter">MastUi</span>
+          <div className="flex items-center gap-2 opacity-50 cursor-pointer" onClick={(e) => handleNavClick(e, 'home')}>
+            <span className="font-bold tracking-tighter font-display">MastUi.com</span>
           </div>
           <p className="text-white/30 text-sm">
-            © 2026 MastUi AI. All rights reserved. Built with Gemini 3.1.
+            © 2026 MastUi.com AI. All rights reserved. Built with Gemini 3.1.
           </p>
           <div className="flex gap-6 text-white/30 text-sm">
-            <a href="#" className="hover:text-white transition-colors">Twitter</a>
-            <a href="#" className="hover:text-white transition-colors">Discord</a>
-            <a href="#" className="hover:text-white transition-colors">Github</a>
+            <a href="https://twitter.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">Twitter</a>
+            <a href="https://discord.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">Discord</a>
+            <a href="https://github.com" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">Github</a>
           </div>
         </div>
       </footer>
